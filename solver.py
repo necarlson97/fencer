@@ -4,57 +4,45 @@ import random as rand
 
 class Solver():
 
-    # Determines how much we tweak each axis
-    step_size = 0.01
+    # Determines how much we can tweak each axis
+    max_step_size = 0.1
+    step_size = max_step_size
+    min_step_size = 0.001
+    # For each run, how many rand settings do we try?
+    step_iters = 50
     # Determines when is good enough
-    precision = 0.0000001
+    precision = 0.001
 
-    # Given a list of inputs, and 
-    # a way of evaluating those inputs,
-    # tweak the settings to minimize that evaluatior
-    prev_settings = [None, None]
-    prev_scores = [1, 1]
+    def random_step():
+        r = rand.random() * Solver.step_size * 2
+        r -= Solver.step_size
+        return r
+
+    def dec_step_size():
+        Solver.step_size -= 0.1
+        Solver.step_size = max(Solver.min_step_size, Solver.step_size)
+
+    def inc_step_size():
+        Solver.step_size *= 2
+        Solver.step_size = min(Solver.max_step_size, Solver.step_size)
 
     @staticmethod
     def choose_setting(settings, evaluator):
-        # NOTE: could do quadratic, but this
-        # is just trying 1 axis at a time
 
-        for i in range(len(settings)):
-            grad = Solver.calc_grad(i)
-            step = grad * Solver.step_size
+        def create_rand_setting():
+            return [s + Solver.random_step()
+                    for s in settings]
 
-            if abs(step) > Solver.precision:
-                settings[i] -= step
+        rand_steps = [create_rand_setting()
+                      for i in range(Solver.step_iters)]
 
-        score = evaluator(settings)
+        best_settings = min(rand_steps, key=evaluator)
 
-        # update scores
-        Solver.prev_scores[0] = Solver.prev_scores[1]
-        Solver.prev_scores[1] = score
-
-        # update settings
-        Solver.prev_settings[0] = Solver.prev_settings[1]
-        Solver.prev_settings[1] = settings
-
-        return settings
-
-    def calc_grad(i):
-        p_scores = Solver.prev_scores
-        p_settings = Solver.prev_settings
-
-        d_score = p_scores[1] - p_scores[0]
-        if Solver.prev_settings[0]:
-            d_setting = p_settings[1][i] - p_settings[0][i]
+        score = evaluator(best_settings)
+        if score < 0.01:
+            Solver.dec_step_size()
         else:
-            d_setting = rand.random() - 0.5
+            Solver.inc_step_size()
 
-        # no need to update if there is no difference
-        if d_setting == 0:
-            return 1
-
-        clamped_d_setting = abs(d_setting) / d_setting
-        grad = d_score * clamped_d_setting
-
-        # print(p_scores, d_score, p_settings, d_setting, grad)
-        return grad
+        Solver.last_score = score
+        return best_settings

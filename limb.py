@@ -18,8 +18,6 @@ class Limb():
         self.target = Point()
         self.segments = []
 
-        self.pinned = True
-
     def add_segment(self, segment):
         if not self.segments:
             segment.a = self.root
@@ -28,10 +26,10 @@ class Limb():
 
     def update(self):
         # Update target to mouse position
-        # m_pos = pg.mouse.get_pos()
-        # self.target.set(*m_pos)
+        m_pos = pg.mouse.get_pos()
+        self.target.set(*m_pos)
 
-        self.target.set(500, 300)
+        # self.target.set(500, 300)
 
         axes = self.get_axes()
         curried_eval = self.create_follow_eval()
@@ -69,23 +67,13 @@ class Limb():
         def norm_ang(a):
             return (a / (math.pi * 2)) % 1
         axes = [norm_ang(s.angle) for s in self.segments]
-        # Can move the root (if it is not pinned)
-        if not self.pinned:
-            axes += [self.root.x / width, self.root.y / height]
         return axes
 
     def convert_axes(self, axes):
         if axes is None:
             return self.root, None
 
-        # un-normalize
-        if not self.pinned:
-            ry = axes[-1] * height
-            rx = axes[-2] * width
-            angles = [a * 2 * math.pi for a in axes[:-2]]
-            return Point(rx, ry), angles
-        else:
-            return self.root, [a * 2 * math.pi for a in axes]
+        return self.root, [a * 2 * math.pi for a in axes]
 
     def create_follow_eval(self):
 
